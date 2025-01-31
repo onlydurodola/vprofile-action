@@ -29,5 +29,5 @@ spec:
 #        env:
 #         - name: MYSQL
 _ROOT_PASSWORD
-#           value: 
+#           value:
 
