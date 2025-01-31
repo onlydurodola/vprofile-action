@@ -94,25 +94,47 @@ jobs:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ env.SONAR_URL }}
        
-  BUILD_AND_PUBLISH:   
+  jobs:
+  BUILD_AND_PUBLISH:
     needs: Testing
     runs-on: ubuntu-latest
     steps:
       - name: Code checkout
         uses: actions/checkout@v4
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::182399687748:role/github-action-OICD
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Retrieve secrets
+        id: get-secrets
+        run: |
+          SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id githubs-actions-secrets --query 'SecretString' --output text)
+          echo "Raw secret JSON: $SECRET_JSON"
+          REGISTRY=$(echo "$SECRET_JSON" | jq -r '.REGISTRY')
+          AWS_ACCESS_KEY_ID=$(echo "$SECRET_JSON" | jq -r '.AWS_ACCESS_KEY_ID')
+          AWS_SECRET_ACCESS_KEY=$(echo "$SECRET_JSON" | jq -r '.AWS_SECRET_ACCESS_KEY')
+          echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
+          echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
+          echo "Retrieved REGISTRY: $REGISTRY"
+          echo "Retrieved AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
+          echo "Retrieved AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
+
       - name: Build & Upload image to ECR
         uses: appleboy/docker-ecr-action@master
         with:
-         access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-         secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-         registry: ${{ secrets.REGISTRY }}
-         repo: ${{ env.ECR_REPOSITORY }}
-         region: ${{ env.AWS_REGION }}
-         tags: latest,${{ github.run_number }}
-         daemon_off: false
-         dockerfile: ./Dockerfile
-         context: ./
+          access_key: ${{ env.AWS_ACCESS_KEY_ID }}
+          secret_key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          registry: ${{ env.REGISTRY }}
+          repo: ${{ env.ECR_REPOSITORY }}
+          region: ${{ env.AWS_REGION }}
+          tags: latest,${{ github.run_number }}
+          daemon_off: false
+          dockerfile: ./Dockerfile
+          context: ./
 
 
   DeployToEKS:
