@@ -94,7 +94,6 @@ jobs:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ env.SONAR_URL }}
        
-  jobs:
   BUILD_AND_PUBLISH:
     needs: Testing
     runs-on: ubuntu-latest
