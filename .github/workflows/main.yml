@@ -107,21 +107,6 @@ jobs:
           role-to-assume: arn:aws:iam::182399687748:role/github-action-OICD
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Retrieve secrets
-        id: get-secrets
-        run: |
-          SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id githubs-actions-secrets --query 'SecretString' --output text)
-          echo "Raw secret JSON: $SECRET_JSON"
-          REGISTRY=$(echo "$SECRET_JSON" | jq -r '.REGISTRY')
-          AWS_ACCESS_KEY_ID=$(echo "$SECRET_JSON" | jq -r '.AWS_ACCESS_KEY_ID')
-          AWS_SECRET_ACCESS_KEY=$(echo "$SECRET_JSON" | jq -r '.AWS_SECRET_ACCESS_KEY')
-          echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
-          echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
-          echo "Retrieved REGISTRY: $REGISTRY"
-          echo "Retrieved AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
-          echo "Retrieved AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
-
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
