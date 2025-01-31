@@ -46,36 +46,27 @@ jobs:
           role-to-assume: arn:aws:iam::182399687748:role/github-action-OICD
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Retrieve SonarQube secrets
+      - name: Retrieve secrets
         id: get-secrets
         run: |
-          SONAR_URL=$(aws secretsmanager get-secret-value --secret-id githubs-actions-secrets --query 'SecretString' --output text | jq -r '.SONAR_URL')
-          SONAR_TOKEN=$(aws secretsmanager get-secret-value --secret-id githubs-actions-secrets --query 'SecretString' --output text | jq -r '.SONAR_TOKEN')
-          SONAR_ORGANIZATION=$(aws secretsmanager get-secret-value --secret-id githubs-actions-secrets --query 'SecretString' --output text | jq -r '.SONAR_ORGANIZATION')
-          SONAR_PROJECT_KEY=$(aws secretsmanager get-secret-value --secret-id githubs-actions-secrets --query 'SecretString' --output text | jq -r '.SONAR_PROJECT_KEY')
-          echo "SONAR_URL=$SONAR_URL" >> $GITHUB_ENV
-          echo "SONAR_TOKEN=$SONAR_TOKEN" >> $GITHUB_ENV
-          echo "SONAR_ORGANIZATION=$SONAR_ORGANIZATION" >> $GITHUB_ENV
-          echo "SONAR_PROJECT_KEY=$SONAR_PROJECT_KEY" >> $GITHUB_ENV
-          echo "Retrieved SONAR_URL: $SONAR_URL"
-          echo "Retrieved SONAR_TOKEN: ***"
-          echo "Retrieved SONAR_ORGANIZATION: $SONAR_ORGANIZATION"
-          echo "Retrieved SONAR_PROJECT_KEY: $SONAR_PROJECT_KEY"
-
-      - name: Test SonarQube server connection
-        run: |
-          echo "Testing connection to SonarQube server: ${{ env.SONAR_URL }}"
-          curl -I ${{ env.SONAR_URL }}
+          SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id githubs-actions-secrets --query 'SecretString' --output text)
+          echo "Raw secret JSON: $SECRET_JSON"
+          REGISTRY=$(echo "$SECRET_JSON" | jq -r '.REGISTRY')
+          AWS_ACCESS_KEY_ID=$(echo "$SECRET_JSON" | jq -r '.AWS_ACCESS_KEY_ID')
+          AWS_SECRET_ACCESS_KEY=$(echo "$SECRET_JSON" | jq -r '.AWS_SECRET_ACCESS_KEY')
+          echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
+          echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
+          echo "Retrieved REGISTRY: $REGISTRY"
+          echo "Retrieved AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
+          echo "Retrieved AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
 
       - name: Setup SonarQube
         uses: warchant/setup-sonar-scanner@v7
 
       - name: SonarQube Scan
         run: |
-          echo "Using SONAR_URL: ${{ env.SONAR_URL }}"
-          echo "Using SONAR_ORGANIZATION: ${{ env.SONAR_ORGANIZATION }}"
-          echo "Using SONAR_PROJECT_KEY: ${{ env.SONAR_PROJECT_KEY }}"
-          sonar-scanner -X \
+          sonar-scanner \
             -Dsonar.host.url=${{ env.SONAR_URL }} \
             -Dsonar.login=${{ env.SONAR_TOKEN }} \
             -Dsonar.organization=${{ env.SONAR_ORGANIZATION }} \
@@ -93,7 +84,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ env.SONAR_URL }}
-       
+
   BUILD_AND_PUBLISH:
     needs: Testing
     runs-on: ubuntu-latest
@@ -107,34 +98,18 @@ jobs:
           role-to-assume: arn:aws:iam::182399687748:role/github-action-OICD
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Retrieve secrets
-        id: get-secrets
-        run: |
-          SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id githubs-actions-secrets --query 'SecretString' --output text)
-          echo "Raw secret JSON: $SECRET_JSON"
-          REGISTRY=$(echo "$SECRET_JSON" | jq -r '.REGISTRY')
-          AWS_ACCESS_KEY_ID=$(echo "$SECRET_JSON" | jq -r '.AWS_ACCESS_KEY_ID')
-          AWS_SECRET_ACCESS_KEY=$(echo "$SECRET_JSON" | jq -r '.AWS_SECRET_ACCESS_KEY')
-          echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
-          echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
-          echo "Retrieved REGISTRY: $REGISTRY"
-          echo "Retrieved AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
-          echo "Retrieved AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build & Upload image to ECR
-        uses: appleboy/docker-ecr-action@master
-        with:
-          access_key: ${{ env.AWS_ACCESS_KEY_ID }}
-          secret_key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          session_token: ${{ env.AWS_SESSION_TOKEN }}
-          registry: ${{ env.REGISTRY }}
-          repo: ${{ env.ECR_REPOSITORY }}
-          region: ${{ env.AWS_REGION }}
-          tags: latest,${{ github.run_number }}
-          daemon_off: false
-          dockerfile: ./Dockerfile
-          context: ./
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+          IMAGE_TAG: latest,${{ github.run_number }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
 
   DeployToEKS:
