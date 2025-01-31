@@ -97,16 +97,12 @@ jobs:
     steps:
       - name: Code checkout
         uses: actions/checkout@v4
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: arn:aws:iam::182399687748:role/github-action-OICD
-          aws-region: ${{ env.AWS_REGION }}
 
       - name: Build & Upload image to ECR
         uses: appleboy/docker-ecr-action@master
         with:
+         access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+         secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
          registry: ${{ secrets.REGISTRY }}
          repo: ${{ env.ECR_REPOSITORY }}
          region: ${{ env.AWS_REGION }}
