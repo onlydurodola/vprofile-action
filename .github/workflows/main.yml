@@ -119,6 +119,21 @@ jobs:
           echo "Retrieved REGISTRY: $REGISTRY"
           echo "Retrieved AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
           echo "Retrieved AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
+      # Debug step to inspect $GITHUB_ENV and confirm variable persistence
+      - name: Debug $GITHUB_ENV
+        run: |
+          echo "Inspecting GITHUB_ENV file..."
+          echo "Location: $GITHUB_ENV"
+          echo "Contents of GITHUB_ENV:"
+          cat $GITHUB_ENV
+
+      # Test access to variables in a new step
+      - name: Test Access to AWS_SECRET_ACCESS_KEY
+        run: |
+          echo "Testing access to variables..."
+          echo "REGISTRY: $REGISTRY"
+          echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
+          echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
 
 
       - name: Build & Upload image to ECR
