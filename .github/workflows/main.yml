@@ -46,10 +46,10 @@ jobs:
       - name: Retrieve SonarQube secrets
         id: get-secrets
         run: |
-          SONAR_URL=$(aws secretsmanager get-secret-value --secret-id github-actions-secrets --query 'SecretString' --output text | jq -r '.SONAR_URL')
-          SONAR_TOKEN=$(aws secretsmanager get-secret-value --secret-id github-actions-secrets --query 'SecretString' --output text | jq -r '.SONAR_TOKEN')
-          SONAR_ORGANIZATION=$(aws secretsmanager get-secret-value --secret-id github-actions-secrets --query 'SecretString' --output text | jq -r '.SONAR_ORGANIZATION')
-          SONAR_PROJECT_KEY=$(aws secretsmanager get-secret-value --secret-id github-actions-secrets --query 'SecretString' --output text | jq -r '.SONAR_PROJECT_KEY')
+          SONAR_URL=$(aws secretsmanager get-secret-value --secret-id githubs-actions-secrets --query 'SecretString' --output text | jq -r '.SONAR_URL')
+          SONAR_TOKEN=$(aws secretsmanager get-secret-value --secret-id githubs-actions-secrets --query 'SecretString' --output text | jq -r '.SONAR_TOKEN')
+          SONAR_ORGANIZATION=$(aws secretsmanager get-secret-value --secret-id githubs-actions-secrets --query 'SecretString' --output text | jq -r '.SONAR_ORGANIZATION')
+          SONAR_PROJECT_KEY=$(aws secretsmanager get-secret-value --secret-id githubs-actions-secrets --query 'SecretString' --output text | jq -r '.SONAR_PROJECT_KEY')
           echo "SONAR_URL=$SONAR_URL" >> $GITHUB_ENV
           echo "SONAR_TOKEN=$SONAR_TOKEN" >> $GITHUB_ENV
           echo "SONAR_ORGANIZATION=$SONAR_ORGANIZATION" >> $GITHUB_ENV
