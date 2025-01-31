@@ -4,6 +4,9 @@ on:
     branches:
       - main
 
+permissions:
+  id-token: write
+
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: vprofile-project-app
